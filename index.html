@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shake-to-Vibrate Number Sequence & Mechanical Watch</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent-color: #06b6d4;
+      --accent-hover: #0891b2;
+      --secondary-color: #10b981;
+      --warning-color: #f59e0b;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --border-color: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    header {
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      color: var(--accent-color);
+      margin-bottom: 0.4rem;
+    }
+
+    .badge-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      display: inline-block;
+    }
+
+    .supported { background-color: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .unsupported { background-color: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .pending { background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+    main {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    /* Input Section */
+    .input-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1rem;
+    }
+
+    .input-card label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .number-input {
+      width: 100%;
+      background: var(--bg-color);
+      border: 2px solid var(--border-color);
+      color: var(--accent-color);
+      font-family: monospace;
+      font-size: 1.4rem;
+      font-weight: bold;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      letter-spacing: 2px;
+      outline: none;
+      transition: border-color 0.2s;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .number-input:focus {
+      border-color: var(--accent-color);
+    }
+
+    /* Sequence Progress Tracker */
+    .sequence-preview {
+      font-family: monospace;
+      font-size: 0.95rem;
+      color: var(--text-sub);
+      margin-top: 0.5rem;
+      word-break: break-all;
+      letter-spacing: 3px;
+    }
+
+    .sequence-preview span.active-digit {
+      color: #fff;
+      background: var(--accent-color);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+
+    /* Screen Display Card */
+    .display-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 20px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      transition: border-color 0.2s, background-color 0.3s;
+      position: relative;
+    }
+
+    .display-card.vibrating {
+      border-color: var(--accent-color);
+      animation: pulse-border 0.3s infinite alternate;
+    }
+
+    .display-card.cooldown {
+      border-color: var(--warning-color);
+      opacity: 0.75;
+    }
+
+    @keyframes pulse-border {
+      from { box-shadow: 0 0 10px var(--accent-color); }
+      to { box-shadow: 0 0 30px var(--accent-color); }
+    }
+
+    .digit-display {
+      font-size: 6rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text-main);
+      letter-spacing: -2px;
+      margin: 0.5rem 0;
+    }
+
+    .pattern-visual {
+      font-family: monospace;
+      font-size: 1.2rem;
+      color: var(--accent-color);
+      margin-bottom: 0.75rem;
+      min-height: 1.5rem;
+    }
+
+    .library-badge {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-sub);
+      background: rgba(255,255,255,0.05);
+      padding: 0.25rem 0.75rem;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    /* Status Indicator */
+    .status-text {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-sub);
+      min-height: 1.2rem;
+    }
+
+    .status-text.locked { color: var(--warning-color); }
+    .status-text.ready { color: var(--secondary-color); }
+
+    /* Interactive Sensor Pads */
+    .touch-sensor {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 2px dashed var(--accent-color);
+      border-radius: 16px;
+      padding: 1.25rem;
+      text-align: center;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 0.15s, transform 0.05s;
+    }
+
+    .touch-sensor:active {
+      background: var(--accent-color);
+      color: #000;
+      transform: scale(0.98);
+    }
+
+    .touch-sensor h2 { font-size: 1rem; margin-bottom: 0.25rem; }
+    .touch-sensor p { font-size: 0.8rem; opacity: 0.8; }
+
+    .library-sensor {
+      border-style: solid;
+      border-color: var(--secondary-color);
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    /* Buttons */
+    .btn {
+      background-color: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn-secondary {
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-watch {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      color: #ffffff;
+      font-size: 1rem;
+      padding: 0.85rem;
+      box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    /* MECHANICAL WATCH MODE STYLES */
+    .watch-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 1rem 0;
+      width: 100%;
+    }
+
+    .mechanical-clock {
+      width: 270px;
+      height: 270px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #1e293b 60%, #0f172a 100%);
+      border: 8px solid #334155;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.9);
+      position: relative;
+    }
+
+    /* Clock Hands */
+    .hand {
+      position: absolute;
+      bottom: 50%;
+      left: 50%;
+      transform-origin: bottom center;
+      border-radius: 4px;
+      z-index: 10;
+    }
+
+    .hour-hand {
+      width: 6px;
+      height: 65px;
+      background: #f8fafc;
+      margin-left: -3px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    .minute-hand {
+      width: 4px;
+      height: 95px;
+      background: #06b6d4;
+      margin-left: -2px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    .second-hand {
+      width: 2px;
+      height: 110px;
+      background: #ef4444;
+      margin-left: -1px;
+      z-index: 12;
+    }
+
+    .center-cap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      background: #ef4444;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 15;
+    }
+
+    /* Dial Markers */
+    .dial-marker {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: bold;
+      padding: 8px;
+    }
+
+    footer {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header id="appHeader">
+    <h1>📳 Shake-to-Vibrate Transceiver</h1>
+    <div class="badge-container">
+      <div id="vibeBadge" class="status-badge checking">Vibration: Checking...</div>
+      <div id="motionBadge" class="status-badge pending">Shake Sensor: Click Enable</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 1. NORMAL CONFIGURATION VIEW -->
+    <div id="normalView" style="display: flex; flex-direction: column; gap: 1rem;">
+      
+      <!-- Toggle Watch Mode Button -->
+      <button class="btn btn-watch" id="enterWatchBtn">⌚ Switch to Mechanical Watch Mode</button>
+
+      <!-- Number Sequence Input Box -->
+      <div class="input-card">
+        <label for="numberInput">Enter Number Sequence to Vibrate:</label>
+        <input 
+          type="text" 
+          id="numberInput" 
+          class="number-input" 
+          value="1234567890" 
+          placeholder="Type numbers here..."
+          inputmode="numeric" 
+        />
+        <div class="sequence-preview" id="sequencePreview">
+          Sequence: <span id="sequenceDigits"></span>
+        </div>
+      </div>
+
+      <!-- Screen Display Area -->
+      <div class="display-card" id="displayCard">
+        <div class="library-badge" id="libraryName">Library: Morse Code</div>
+        <div class="digit-display" id="digitDisplay">1</div>
+        <div class="pattern-visual" id="patternVisual">▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄</div>
+        <div class="status-text ready" id="statusText">
+          Ready! Shake phone to vibrate.
+        </div>
+      </div>
+
+      <!-- Sensor Enable & Controls -->
+      <div class="controls-grid">
+        <button class="btn" id="enableMotionBtn">📱 Enable Shake Sensor</button>
+        <button class="btn btn-secondary" id="resetSeqBtn">⏮ Reset Position</button>
+      </div>
+
+      <!-- Library Touch Sensor -->
+      <div class="touch-sensor library-sensor" id="librarySensor">
+        <h2>🔄 TOUCH SENSOR: SWITCH LIBRARY</h2>
+        <p>Tap here to switch vibration encoding library</p>
+      </div>
+
+      <!-- Backup Touch Vibrate Sensor -->
+      <div class="touch-sensor" id="vibrateSensor">
+        <h2>🖐 TAP TO VIBRATE & ADVANCE</h2>
+        <p>(Alternative to shaking)</p>
+      </div>
+
+    </div>
+
+    <!-- 2. MECHANICAL WATCH MODE VIEW (STEALTH) -->
+    <div id="watchView" class="watch-container hidden">
+      <!-- Mechanical Analog Watch Face -->
+      <div class="mechanical-clock" id="clockFace">
+        <div class="dial-marker" style="transform: rotate(0deg);">12</div>
+        <div class="dial-marker" style="transform: rotate(30deg);">1</div>
+        <div class="dial-marker" style="transform: rotate(60deg);">2</div>
+        <div class="dial-marker" style="transform: rotate(90deg);">3</div>
+        <div class="dial-marker" style="transform: rotate(120deg);">4</div>
+        <div class="dial-marker" style="transform: rotate(150deg);">5</div>
+        <div class="dial-marker" style="transform: rotate(180deg);">6</div>
+        <div class="dial-marker" style="transform: rotate(210deg);">7</div>
+        <div class="dial-marker" style="transform: rotate(240deg);">8</div>
+        <div class="dial-marker" style="transform: rotate(270deg);">9</div>
+        <div class="dial-marker" style="transform: rotate(300deg);">10</div>
+        <div class="dial-marker" style="transform: rotate(330deg);">11</div>
+
+        <!-- Clock Hands -->
+        <div class="hand hour-hand" id="hourHand"></div>
+        <div class="hand minute-hand" id="minuteHand"></div>
+        <div class="hand second-hand" id="secondHand"></div>
+        <div class="center-cap"></div>
+      </div>
+
+      <!-- Exit Button -->
+      <button class="btn btn-secondary" id="exitWatchBtn" style="max-width: 250px;">
+        ⚙ Exit Watch Mode
+      </button>
+    </div>
+  </main>
+
+  <footer id="appFooter">
+    <p>Hosted on GitHub Pages • 2-Second Delay Active</p>
+  </footer>
+
+  <script>
+    // --- ENCODING LIBRARIES ---
+    const LIBRARIES = [
+      {
+        name: "Morse Code Digits",
+        patterns: {
+          0: [300, 100, 300, 100, 300, 100, 300, 100, 300], // _ _ _ _ _
+          1: [100, 100, 300, 100, 300, 100, 300, 100, 300], // . _ _ _ _
+          2: [100, 100, 100, 100, 300, 100, 300, 100, 300], // . . _ _ _
+          3: [100, 100, 100, 100, 100, 100, 300, 100, 300], // . . . _ _
+          4: [100, 100, 100, 100, 100, 100, 100, 100, 300], // . . . . _
+          5: [100, 100, 100, 100, 100, 100, 100, 100, 100], // . . . . .
+          6: [300, 100, 100, 100, 100, 100, 100, 100, 100], // _ . . . .
+          7: [300, 100, 300, 100, 100, 100, 100, 100, 100], // _ _ . . .
+          8: [300, 100, 300, 100, 300, 100, 100, 100, 100], // _ _ _ . .
+          9: [300, 100, 300, 100, 300, 100, 300, 100, 100]  // _ _ _ _ .
+        },
+        visuals: {
+          0: "▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄",
+          1: "▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄",
+          2: "▄ ▄ ▄▄▄ ▄▄▄ ▄▄▄",
+          3: "▄ ▄ ▄ ▄▄▄ ▄▄▄",
+          4: "▄ ▄ ▄ ▄ ▄▄▄",
+          5: "▄ ▄ ▄ ▄ ▄",
+          6: "▄▄▄ ▄ ▄ ▄ ▄",
+          7: "▄▄▄ ▄▄▄ ▄ ▄ ▄",
+          8: "▄▄▄ ▄▄▄ ▄▄▄ ▄ ▄",
+          9: "▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄"
+        }
+      },
+      {
+        name: "Pulse Count",
+        patterns: {
+          0: [600],
+          1: [150],
+          2: [150, 120, 150],
+          3: [150, 120, 150, 120, 150],
+          4: [150, 120, 150, 120, 150, 120, 150],
+          5: [150, 120, 150, 120, 150, 120, 150, 120, 150],
+          6: [150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150],
+          7: [150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150],
+          8: [150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150],
+          9: [150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150, 120, 150]
+        },
+        visuals: {
+          0: "██████ (1 Long Pulse)",
+          1: "█",
+          2: "█  █",
+          3: "█  █  █",
+          4: "█  █  █  █",
+          5: "█  █  █  █  █",
+          6: "█  █  █  █  █  █",
+          7: "█  █  █  █  █  █  █",
+          8: "█  █  █  █  █  █  █  █",
+          9: "█  █  █  █  █  █  █  █  █"
+        }
+      },
+      {
+        name: "Binary Code",
+        patterns: {
+          0: [100, 100, 100, 100, 100, 100, 100],               // 0000
+          1: [100, 100, 100, 100, 100, 100, 300],               // 0001
+          2: [100, 100, 100, 100, 300, 100, 100],               // 0010
+          3: [100, 100, 100, 100, 300, 100, 300],               // 0011
+          4: [100, 100, 300, 100, 100, 100, 100],               // 0100
+          5: [100, 100, 300, 100, 100, 100, 300],               // 0101
+          6: [100, 100, 300, 100, 300, 100, 100],               // 0110
+          7: [100, 100, 300, 100, 300, 100, 300],               // 0111
+          8: [300, 100, 100, 100, 100, 100, 100],               // 1000
+          9: [300, 100, 100, 100, 100, 100, 300]                // 1001
+        },
+        visuals: {
+          0: "0000 (Short Short Short Short)",
+          1: "0001 (Short Short Short Long)",
+          2: "0010 (Short Short Long Short)",
+          3: "0011 (Short Short Long Long)",
+          4: "0100 (Short Long Short Short)",
+          5: "0101 (Short Long Short Long)",
+          6: "0110 (Short Long Short Long)",
+          7: "0111 (Short Long Long Long)",
+          8: "1000 (Long Short Short Short)",
+          9: "1001 (Long Short Short Long)"
+        }
+      }
+    ];
+
+    // --- STATE VARIABLES ---
+    let sequenceIndex = 0;
+    let currentLibraryIndex = 0;
+    let isLocked = false;
+    let isWatchMode = false;
+    let parsedDigits = [];
+
+    // Accelerometer variables
+    let lastX = null, lastY = null, lastZ = null;
+    const SHAKE_THRESHOLD = 18;
+
+    // --- DOM ELEMENTS ---
+    const appHeader = document.getElementById('appHeader');
+    const appFooter = document.getElementById('appFooter');
+    const normalView = document.getElementById('normalView');
+    const watchView = document.getElementById('watchView');
+    const enterWatchBtn = document.getElementById('enterWatchBtn');
+    const exitWatchBtn = document.getElementById('exitWatchBtn');
+
+    const numberInput = document.getElementById('numberInput');
+    const sequenceDigits = document.getElementById('sequenceDigits');
+    const digitDisplay = document.getElementById('digitDisplay');
+    const patternVisual = document.getElementById('patternVisual');
+    const libraryName = document.getElementById('libraryName');
+    const statusText = document.getElementById('statusText');
+    const displayCard = document.getElementById('displayCard');
+    const vibeBadge = document.getElementById('vibeBadge');
+    const motionBadge = document.getElementById('motionBadge');
+    const librarySensor = document.getElementById('librarySensor');
+    const vibrateSensor = document.getElementById('vibrateSensor');
+    const enableMotionBtn = document.getElementById('enableMotionBtn');
+    const resetSeqBtn = document.getElementById('resetSeqBtn');
+
+    // Clock Hands DOM
+    const hourHand = document.getElementById('hourHand');
+    const minuteHand = document.getElementById('minuteHand');
+    const secondHand = document.getElementById('secondHand');
+
+    // --- INITIALIZATION ---
+    function init() {
+      if ("vibrate" in navigator) {
+        vibeBadge.textContent = "✓ Vibration API Ready";
+        vibeBadge.className = "status-badge supported";
+      } else {
+        vibeBadge.textContent = "⚠ Vibration API Unsupported";
+        vibeBadge.className = "status-badge unsupported";
+      }
+
+      updateSequenceFromInput();
+      setupAutoMotionListener();
+      
+      // Start Mechanical Clock Ticking Engine
+      setInterval(updateClockHands, 1000);
+      updateClockHands();
+    }
+
+    // --- MECHANICAL CLOCK LOGIC ---
+    function updateClockHands() {
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const minutes = now.getMinutes() + seconds / 60;
+      const hours = (now.getHours() % 12) + minutes / 60;
+
+      const secondDeg = seconds * 6;
+      const minuteDeg = minutes * 6;
+      const hourDeg = hours * 30;
+
+      secondHand.style.transform = `rotate(${secondDeg}deg)`;
+      minuteHand.style.transform = `rotate(${minuteDeg}deg)`;
+      hourHand.style.transform = `rotate(${hourDeg}deg)`;
+    }
+
+    // --- WATCH MODE TOGGLE ---
+    function toggleWatchMode() {
+      isWatchMode = !isWatchMode;
+
+      if (isWatchMode) {
+        normalView.classList.add('hidden');
+        appHeader.classList.add('hidden');
+        appFooter.classList.add('hidden');
+        watchView.classList.remove('hidden');
+      } else {
+        watchView.classList.add('hidden');
+        normalView.classList.remove('hidden');
+        appHeader.classList.remove('hidden');
+        appFooter.classList.remove('hidden');
+      }
+    }
+
+    // --- SEQUENCE MANAGEMENT ---
+    function updateSequenceFromInput() {
+      const rawText = numberInput.value;
+      parsedDigits = rawText.replace(/\D/g, '').split('').map(Number);
+
+      if (parsedDigits.length === 0) parsedDigits = [0];
+      if (sequenceIndex >= parsedDigits.length) sequenceIndex = 0;
+
+      renderSequencePreview();
+      updateUI();
+    }
+
+    function renderSequencePreview() {
+      let html = '';
+      parsedDigits.forEach((digit, idx) => {
+        if (idx === sequenceIndex) {
+          html += `<span class="active-digit">${digit}</span> `;
+        } else {
+          html += `${digit} `;
+        }
+      });
+      sequenceDigits.innerHTML = html;
+    }
+
+    function updateUI() {
+      const activeDigit = parsedDigits[sequenceIndex];
+      const lib = LIBRARIES[currentLibraryIndex];
+
+      digitDisplay.textContent = activeDigit;
+      patternVisual.textContent = lib.visuals[activeDigit] || "";
+      libraryName.textContent = `Library: ${lib.name}`;
+      renderSequencePreview();
+    }
+
+    // --- TRIGGER VIBRATION & ADVANCE ---
+    function triggerVibrationAndAdvance() {
+      if (isLocked || parsedDigits.length === 0) return;
+
+      isLocked = true;
+
+      const activeDigit = parsedDigits[sequenceIndex];
+      const lib = LIBRARIES[currentLibraryIndex];
+      const pattern = lib.patterns[activeDigit] || [200];
+      const patternDuration = pattern.reduce((a, b) => a + b, 0);
+
+      displayCard.classList.add('vibrating');
+      displayCard.classList.remove('cooldown');
+      statusText.className = "status-text locked";
+      statusText.textContent = `Vibrating digit '${activeDigit}' (${sequenceIndex + 1} of ${parsedDigits.length})...`;
+
+      // Trigger physical vibration
+      if ("vibrate" in navigator) {
+        navigator.vibrate(pattern);
+      }
+
+      // STEP 1: Wait until vibration pattern finishes
+      setTimeout(() => {
+        displayCard.classList.remove('vibrating');
+        displayCard.classList.add('cooldown');
+
+        // Advance sequence
+        sequenceIndex = (sequenceIndex + 1) % parsedDigits.length;
+        updateUI();
+
+        // STEP 2: Begin mandatory 2-Second Cooldown
+        let remainingSeconds = 2;
+        statusText.textContent = `⏳ Cooldown: Waiting ${remainingSeconds}s...`;
+
+        const countdownInterval = setInterval(() => {
+          remainingSeconds--;
+          if (remainingSeconds > 0) {
+            statusText.textContent = `⏳ Cooldown: Waiting ${remainingSeconds}s...`;
+          } else {
+            clearInterval(countdownInterval);
+
+            lastX = null; lastY = null; lastZ = null;
+            isLocked = false;
+            displayCard.classList.remove('cooldown');
+            statusText.className = "status-text ready";
+            statusText.textContent = `Ready! Shake now for digit '${parsedDigits[sequenceIndex]}'.`;
+          }
+        }, 1000);
+
+      }, patternDuration);
+    }
+
+    // --- SHAKE DETECTION ---
+    function handleMotion(event) {
+      if (isLocked) return;
+
+      const acc = event.accelerationIncludingGravity || event.acceleration;
+      if (!acc || acc.x === null) return;
+
+      if (lastX !== null) {
+        const deltaX = Math.abs(acc.x - lastX);
+        const deltaY = Math.abs(acc.y - lastY);
+        const deltaZ = Math.abs(acc.z - lastZ);
+
+        if ((deltaX + deltaY + deltaZ) > SHAKE_THRESHOLD) {
+          triggerVibrationAndAdvance();
+          return;
+        }
+      }
+
+      lastX = acc.x; lastY = acc.y; lastZ = acc.z;
+    }
+
+    function setupAutoMotionListener() {
+      if (window.DeviceMotionEvent) {
+        if (typeof DeviceMotionEvent.requestPermission !== 'function') {
+          window.addEventListener('devicemotion', handleMotion, false);
+          motionBadge.textContent = "✓ Shake Sensor Active";
+          motionBadge.className = "status-badge supported";
+          enableMotionBtn.style.display = "none";
+        }
+      } else {
+        motionBadge.textContent = "⚠ Motion Sensor Unsupported";
+        motionBadge.className = "status-badge unsupported";
+      }
+    }
+
+    async function requestMotionPermission() {
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+          const response = await DeviceMotionEvent.requestPermission();
+          if (response === 'granted') {
+            window.addEventListener('devicemotion', handleMotion, false);
+            motionBadge.textContent = "✓ Shake Sensor Active";
+            motionBadge.className = "status-badge supported";
+            enableMotionBtn.textContent = "✓ Shake Active";
+            enableMotionBtn.style.opacity = "0.6";
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      } else {
+        window.addEventListener('devicemotion', handleMotion, false);
+        motionBadge.textContent = "✓ Shake Sensor Active";
+        motionBadge.className = "status-badge supported";
+      }
+    }
+
+    function nextLibrary() {
+      if (isLocked) return;
+      currentLibraryIndex = (currentLibraryIndex + 1) % LIBRARIES.length;
+      updateUI();
+
+      if ("vibrate" in navigator) {
+        navigator.vibrate([60, 60, 60, 60, 60]);
+      }
+
+      statusText.textContent = `Library switched to: ${LIBRARIES[currentLibraryIndex].name}`;
+    }
+
+    // --- EVENT LISTENERS ---
+    enterWatchBtn.addEventListener('click', toggleWatchMode);
+    exitWatchBtn.addEventListener('click', toggleWatchMode);
+
+    numberInput.addEventListener('input', updateSequenceFromInput);
+    enableMotionBtn.addEventListener('click', requestMotionPermission);
+
+    resetSeqBtn.addEventListener('click', () => {
+      sequenceIndex = 0;
+      updateUI();
+      statusText.textContent = "Sequence position reset back to start.";
+    });
+
+    librarySensor.addEventListener('click', nextLibrary);
+    vibrateSensor.addEventListener('click', triggerVibrationAndAdvance);
+    displayCard.addEventListener('click', triggerVibrationAndAdvance);
+
+    init();
+  </script>
+</body>
+</html>
